@@ -1,6 +1,7 @@
 import React from 'react'
 import { Download, Send } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { v4 as uuidv4 } from 'uuid'
 import { ProjecaoValores } from './ProjecaoValores'
 
 export function ValoresStep({ formData, setFormData }) {
@@ -955,10 +956,13 @@ export function FinalStep({ formData }) {
 
     const sendToN8N = async () => {
     try {
-      // 1. Baixa o Excel
+      // 1. Gera UUID único para o cliente
+      const userId = uuidv4()
+      
+      // 2. Baixa o Excel
       exportToExcel()
       
-      // 2. Envia para o webhook do n8n
+      // 3. Envia para o webhook do n8n
       const response = await fetch('https://diegokek.app.n8n.cloud/webhook/balançopatrimonial', {
         method: 'POST',
         headers: {
@@ -968,7 +972,8 @@ export function FinalStep({ formData }) {
           auth: {
             email: formData.auth.email,
             senha: formData.auth.senha,
-            nome_familia: formData.auth.nomeFamilia
+            nome_familia: formData.auth.nomeFamilia,
+            user_id: userId
           },
           data: formData,
           timestamp: new Date().toISOString(),
