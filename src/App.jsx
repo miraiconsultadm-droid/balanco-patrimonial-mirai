@@ -18,6 +18,7 @@ function App() {
       console.error('Erro ao carregar dados salvos:', error)
     }
     return {
+      auth: { nomeFamilia: '', email: '', senha: '', confirmarSenha: '' },
       valores: { saude: [], financas: [], trabalho: [], relacionamentos: [], espiritualidade: [] },
       sonhos: { riqueza: '', proposito: '', receio: '', sobra: '', futuro5anos: '', futuro10anos: '', sonhosDesejos: '', angustiasMedos: '', legado: '' },
       ativos: {},
@@ -71,6 +72,7 @@ function App() {
     if (window.confirm('Tem certeza que deseja limpar todos os dados do formulário? Esta ação não pode ser desfeita.')) {
       localStorage.removeItem('balancoPatrimonialData')
       setFormData({
+        auth: { nomeFamilia: '', email: '', senha: '', confirmarSenha: '' },
         valores: { saude: [], financas: [], trabalho: [], relacionamentos: [], espiritualidade: [] },
         sonhos: { riqueza: '', proposito: '', receio: '', sobra: '', futuro5anos: '', futuro10anos: '', sonhosDesejos: '', angustiasMedos: '', legado: '' },
         ativos: {},
@@ -194,7 +196,50 @@ function App() {
   )
 }
 
-function WelcomeStep({ nextStep }) {
+function WelcomeStep({ nextStep, formData, setFormData }) {
+  const [errors, setErrors] = useState({})
+
+  const validateAndProceed = () => {
+    const newErrors = {}
+    
+    if (!formData.auth.nomeFamilia.trim()) {
+      newErrors.nomeFamilia = 'Por favor, informe o nome da família'
+    }
+    
+    if (!formData.auth.email.trim()) {
+      newErrors.email = 'Por favor, informe seu email'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.auth.email)) {
+      newErrors.email = 'Por favor, informe um email válido'
+    }
+    
+    if (!formData.auth.senha) {
+      newErrors.senha = 'Por favor, crie uma senha'
+    } else if (formData.auth.senha.length < 6) {
+      newErrors.senha = 'A senha deve ter pelo menos 6 caracteres'
+    }
+    
+    if (formData.auth.senha !== formData.auth.confirmarSenha) {
+      newErrors.confirmarSenha = 'As senhas não coincidem'
+    }
+    
+    setErrors(newErrors)
+    
+    if (Object.keys(newErrors).length === 0) {
+      nextStep()
+    }
+  }
+
+  const updateAuth = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      auth: { ...prev.auth, [field]: value }
+    }))
+    // Limpa o erro do campo quando o usuário começa a digitar
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
   return (
     <div className="mirai-card p-8 md:p-12 text-center space-y-6">
       <h2 className="text-3xl md:text-4xl font-bold mirai-text-gradient">Seja bem-vindo(a)!</h2>
@@ -225,7 +270,64 @@ function WelcomeStep({ nextStep }) {
         </ul>
       </div>
 
-      <button onClick={nextStep} className="mirai-button flex items-center gap-2 mx-auto mt-8">
+      <div className="bg-card/50 p-6 rounded-lg border border-primary/30 text-left max-w-2xl mx-auto">
+        <h3 className="text-xl font-semibold mb-4 text-primary text-center">Crie sua conta para começar</h3>
+        <p className="text-sm text-foreground/70 mb-6 text-center">
+          Você usará estes dados para acessar seu dashboard personalizado depois
+        </p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-foreground">Nome da Família/Cliente *</label>
+            <input
+              type="text"
+              value={formData.auth.nomeFamilia}
+              onChange={(e) => updateAuth('nomeFamilia', e.target.value)}
+              placeholder="Ex: Família Silva"
+              className={`mirai-input w-full ${errors.nomeFamilia ? 'border-red-500' : ''}`}
+            />
+            {errors.nomeFamilia && <p className="text-red-500 text-sm mt-1">{errors.nomeFamilia}</p>}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-foreground">Email *</label>
+            <input
+              type="email"
+              value={formData.auth.email}
+              onChange={(e) => updateAuth('email', e.target.value)}
+              placeholder="seu@email.com"
+              className={`mirai-input w-full ${errors.email ? 'border-red-500' : ''}`}
+            />
+            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-foreground">Criar Senha *</label>
+            <input
+              type="password"
+              value={formData.auth.senha}
+              onChange={(e) => updateAuth('senha', e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              className={`mirai-input w-full ${errors.senha ? 'border-red-500' : ''}`}
+            />
+            {errors.senha && <p className="text-red-500 text-sm mt-1">{errors.senha}</p>}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-foreground">Confirmar Senha *</label>
+            <input
+              type="password"
+              value={formData.auth.confirmarSenha}
+              onChange={(e) => updateAuth('confirmarSenha', e.target.value)}
+              placeholder="Digite a senha novamente"
+              className={`mirai-input w-full ${errors.confirmarSenha ? 'border-red-500' : ''}`}
+            />
+            {errors.confirmarSenha && <p className="text-red-500 text-sm mt-1">{errors.confirmarSenha}</p>}
+          </div>
+        </div>
+      </div>
+
+      <button onClick={validateAndProceed} className="mirai-button flex items-center gap-2 mx-auto mt-8">
         Começar
         <ChevronRight className="w-5 h-5" />
       </button>

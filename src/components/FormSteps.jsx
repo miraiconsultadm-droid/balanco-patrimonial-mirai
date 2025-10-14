@@ -1,6 +1,8 @@
+import React from 'react'
 import { Download, Send } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { ProjecaoValores } from './ProjecaoValores'
+import { supabase } from '../supabaseClient'
 
 export function ValoresStep({ formData, setFormData }) {
   const valoresOptions = {
@@ -954,16 +956,43 @@ export function FinalStep({ formData }) {
 
   const sendToN8N = async () => {
     try {
-      // Primeiro, baixa o Excel
+      // 1. Criar conta no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.auth.email,
+        password: formData.auth.senha,
+        options: {
+          data: {
+            nome_familia: formData.auth.nomeFamilia
+          }
+        }
+      })
+
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          alert('⚠️ Este email já está cadastrado. Por favor, use outro email ou faça login no dashboard.')
+          return
+        }
+        throw authError
+      }
+
+      const userId = authData.user?.id
+
+      // 2. Baixa o Excel
       exportToExcel()
       
-      // Envia para o webhook do n8n
+      // 3. Envia para o webhook do n8n (incluindo senha em texto claro)
       const response = await fetch('https://diegokek.app.n8n.cloud/webhook/balançopatrimonial', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          auth: {
+            email: formData.auth.email,
+            senha: formData.auth.senha,
+            nome_familia: formData.auth.nomeFamilia,
+            user_id: userId
+          },
           data: formData,
           timestamp: new Date().toISOString(),
           resumo: {
@@ -980,14 +1009,14 @@ export function FinalStep({ formData }) {
       if (response.ok) {
         // Limpa os dados salvos após envio bem-sucedido
         localStorage.removeItem('balancoPatrimonialData')
-        alert('✅ Sucesso! Arquivo Excel baixado e dados enviados automaticamente para a equipe MirAI!\n\nOs dados salvos foram limpos. Você pode preencher um novo formulário agora.')
+        alert(`✅ Sucesso! Conta criada e dados enviados!\n\n📧 Email: ${formData.auth.email}\n\nVocê receberá um email de confirmação. Depois poderá acessar seu dashboard em:\ndashboard.miraiconsult.com\n\nOs dados salvos foram limpos.`)
       } else {
         throw new Error('Erro ao enviar para n8n')
       }
       
     } catch (error) {
-      console.error('Erro ao enviar para n8n:', error)
-      alert('✅ Arquivo Excel baixado com sucesso!\n\n⚠️ Houve um problema ao enviar os dados automaticamente. Por favor, envie o arquivo Excel manualmente para diegoelkek@gmail.com')
+      console.error('Erro:', error)
+      alert('⚠️ Erro ao processar: ' + (error.message || 'Erro desconhecido'))
     }
   }
 
