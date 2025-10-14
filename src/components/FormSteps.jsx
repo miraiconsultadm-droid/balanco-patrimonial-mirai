@@ -1,5 +1,6 @@
 import { Download, Send } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { ProjecaoValores } from './ProjecaoValores'
 
 export function ValoresStep({ formData, setFormData }) {
   const valoresOptions = {
@@ -230,9 +231,7 @@ export function PassivosStep({ formData, setFormData }) {
     "Financiamentos": ["Financiamento de imóvel", "Financiamento de carro"],
     "Empréstimos": ["Empréstimo pessoal", "Empréstimo consignado"],
     "Cartão de Crédito": ["Fatura do cartão de crédito"],
-    "Contas da Casa": ["Aluguel", "Condomínio", "Contas de luz, água, gás, internet"],
-    "Educação": ["Mensalidade da escola ou faculdade"],
-    "Outros Compromissos": ["Impostos a pagar (IPVA, IPTU)", "Plano de saúde"]
+    "Passivos Trabalhistas/Fiscais": ["Impostos a pagar (IPVA, IPTU, IR)", "Dívidas trabalhistas ou fiscais"]
   }
 
   const updatePassivoValor = (categoria, item, value) => {
@@ -489,34 +488,34 @@ export function ReceitasStep({ formData, setFormData }) {
 }
 
 export function DespesasStep({ formData, setFormData }) {
-  const categorias = {
-    "Moradia": ["Aluguel ou prestação da casa", "Condomínio", "Contas (água, luz, gás, internet)"],
-    "Alimentação": ["Supermercado", "Restaurantes e lanches fora de casa"],
-    "Transporte": ["Combustível", "Transporte público ou por aplicativo", "Manutenção do carro"],
-    "Saúde": ["Plano de saúde", "Medicamentos", "Consultas e exames"],
-    "Lazer": ["Academia", "Cinema, shows, passeios", "Viagens curtas"],
-    "Educação": ["Mensalidade da escola ou faculdade", "Cursos e livros"],
-    "Cuidados Pessoais": ["Salão de beleza, barbearia", "Roupas e sapatos"],
-    "Filhos e Pets": ["Mesada", "Gastos com material escolar", "Ração e veterinário"]
-  }
+  const categorias = [
+    "Moradia",
+    "Alimentação",
+    "Veículos/Transporte",
+    "Saúde",
+    "Lazer",
+    "Educação",
+    "Filhos",
+    "Pets",
+    "Compras Pessoais"
+  ]
 
-  const updateDespesa = (categoria, item, field, value) => {
-    const key = `${categoria}_${item}`
+  const updateDespesa = (categoria, field, value) => {
     setFormData({
       ...formData,
       despesas: {
         ...formData.despesas,
-        [key]: {
-          ...(formData.despesas[key] || {}),
+        [categoria]: {
+          ...(formData.despesas[categoria] || {}),
           [field]: value
         }
       }
     })
   }
 
-  const addCustomDespesa = (categoria) => {
-    const customCount = Object.keys(formData.despesasCustom || {}).filter(k => k.startsWith(`${categoria}_Outro_`)).length
-    const newKey = `${categoria}_Outro_${customCount + 1}`
+  const addCustomDespesa = () => {
+    const customCount = Object.keys(formData.despesasCustom || {}).filter(k => k.startsWith('Outra_')).length
+    const newKey = `Outra_${customCount + 1}`
     setFormData({
       ...formData,
       despesasCustom: {
@@ -543,111 +542,103 @@ export function DespesasStep({ formData, setFormData }) {
     <div className="mirai-card p-6 md:p-8">
       <h2 className="text-2xl md:text-3xl font-bold mirai-text-gradient mb-4">O Que Você Gasta (Despesas)</h2>
       <p className="text-foreground/80 mb-6">
-        Vamos entender para onde vai o seu dinheiro. Preencha valor, frequência e período de cada gasto.
+        Vamos entender para onde vai o seu dinheiro. Preencha valor, frequência e período de cada categoria de gasto.
       </p>
 
-      {Object.entries(categorias).map(([categoria, itens]) => (
-        <div key={categoria} className="mb-8">
-          <h3 className="text-xl font-semibold mb-4 text-primary">{categoria}</h3>
-          <div className="space-y-4">
-            {itens.map((item) => {
-              const key = `${categoria}_${item}`
-              const despesa = formData.despesas[key] || {}
-              return (
-                <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                  <label className="block text-foreground mb-3 font-medium">{item}</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <input
-                      type="text"
-                      value={despesa.valor || ''}
-                      onChange={(e) => updateDespesa(categoria, item, 'valor', e.target.value)}
-                      placeholder="R$ Valor"
-                      className="mirai-input w-full"
-                    />
-                    <select
-                      value={despesa.frequencia || ''}
-                      onChange={(e) => updateDespesa(categoria, item, 'frequencia', e.target.value)}
-                      className="mirai-input w-full"
-                    >
-                      <option value="">Frequência</option>
-                      <option value="mensal">Mensal</option>
-                      <option value="anual">Anual</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={despesa.inicio || ''}
-                      onChange={(e) => updateDespesa(categoria, item, 'inicio', e.target.value)}
-                      placeholder="Início (ano)"
-                      className="mirai-input w-full"
-                    />
-                    <input
-                      type="text"
-                      value={despesa.fim || ''}
-                      onChange={(e) => updateDespesa(categoria, item, 'fim', e.target.value)}
-                      placeholder="Fim (ano)"
-                      className="mirai-input w-full"
-                    />
-                  </div>
-                </div>
-              )
-            })}
-            
-            {/* Despesas personalizadas */}
-            {Object.entries(formData.despesasCustom || {})
-              .filter(([key]) => key.startsWith(`${categoria}_Outro_`))
-              .map(([key, custom]) => (
-                <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                  <input
-                    type="text"
-                    value={custom.nome || ''}
-                    onChange={(e) => updateCustomDespesa(key, 'nome', e.target.value)}
-                    placeholder="Nome da despesa"
-                    className="mirai-input w-full mb-3"
-                  />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <input
-                      type="text"
-                      value={custom.valor || ''}
-                      onChange={(e) => updateCustomDespesa(key, 'valor', e.target.value)}
-                      placeholder="R$ Valor"
-                      className="mirai-input w-full"
-                    />
-                    <select
-                      value={custom.frequencia || ''}
-                      onChange={(e) => updateCustomDespesa(key, 'frequencia', e.target.value)}
-                      className="mirai-input w-full"
-                    >
-                      <option value="">Frequência</option>
-                      <option value="mensal">Mensal</option>
-                      <option value="anual">Anual</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={custom.inicio || ''}
-                      onChange={(e) => updateCustomDespesa(key, 'inicio', e.target.value)}
-                      placeholder="Início (ano)"
-                      className="mirai-input w-full"
-                    />
-                    <input
-                      type="text"
-                      value={custom.fim || ''}
-                      onChange={(e) => updateCustomDespesa(key, 'fim', e.target.value)}
-                      placeholder="Fim (ano)"
-                      className="mirai-input w-full"
-                    />
-                  </div>
-                </div>
-              ))}
-            
-            <button
-              onClick={() => addCustomDespesa(categoria)}
-              className="text-sm text-primary hover:text-primary/80 transition-colors"
-            >
-              + Adicionar outra despesa em {categoria}
-            </button>
+      <div className="space-y-6">
+        {categorias.map((categoria) => {
+          const despesa = formData.despesas[categoria] || {}
+          return (
+            <div key={categoria} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+              <label className="block text-foreground mb-3 font-medium text-lg">{categoria}</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <input
+                  type="text"
+                  value={despesa.valor || ''}
+                  onChange={(e) => updateDespesa(categoria, 'valor', e.target.value)}
+                  placeholder="R$ Valor"
+                  className="mirai-input w-full"
+                />
+                <select
+                  value={despesa.frequencia || ''}
+                  onChange={(e) => updateDespesa(categoria, 'frequencia', e.target.value)}
+                  className="mirai-input w-full"
+                >
+                  <option value="">Frequência</option>
+                  <option value="mensal">Mensal</option>
+                  <option value="anual">Anual</option>
+                </select>
+                <input
+                  type="text"
+                  value={despesa.inicio || ''}
+                  onChange={(e) => updateDespesa(categoria, 'inicio', e.target.value)}
+                  placeholder="Início (ano)"
+                  className="mirai-input w-full"
+                />
+                <input
+                  type="text"
+                  value={despesa.fim || ''}
+                  onChange={(e) => updateDespesa(categoria, 'fim', e.target.value)}
+                  placeholder="Fim (ano)"
+                  className="mirai-input w-full"
+                />
+              </div>
+            </div>
+          )
+        })}
+        
+        {/* Despesas personalizadas */}
+        {Object.entries(formData.despesasCustom || {}).map(([key, custom]) => (
+          <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+            <input
+              type="text"
+              value={custom.nome || ''}
+              onChange={(e) => updateCustomDespesa(key, 'nome', e.target.value)}
+              placeholder="Nome da despesa"
+              className="mirai-input w-full mb-3"
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <input
+                type="text"
+                value={custom.valor || ''}
+                onChange={(e) => updateCustomDespesa(key, 'valor', e.target.value)}
+                placeholder="R$ Valor"
+                className="mirai-input w-full"
+              />
+              <select
+                value={custom.frequencia || ''}
+                onChange={(e) => updateCustomDespesa(key, 'frequencia', e.target.value)}
+                className="mirai-input w-full"
+              >
+                <option value="">Frequência</option>
+                <option value="mensal">Mensal</option>
+                <option value="anual">Anual</option>
+              </select>
+              <input
+                type="text"
+                value={custom.inicio || ''}
+                onChange={(e) => updateCustomDespesa(key, 'inicio', e.target.value)}
+                placeholder="Início (ano)"
+                className="mirai-input w-full"
+              />
+              <input
+                type="text"
+                value={custom.fim || ''}
+                  onChange={(e) => updateCustomDespesa(key, 'fim', e.target.value)}
+                placeholder="Fim (ano)"
+                className="mirai-input w-full"
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+        
+        <button
+          onClick={addCustomDespesa}
+          className="text-sm text-primary hover:text-primary/80 transition-colors"
+        >
+          + Adicionar outra categoria de despesa
+        </button>
+      </div>
     </div>
   )
 }
