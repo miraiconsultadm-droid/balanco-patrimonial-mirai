@@ -423,6 +423,14 @@ export function ReceitasStep({ formData, setFormData }) {
                       className="mirai-input w-full"
                     />
                   </div>
+                  
+                  {/* Sistema de Projeção */}
+                  <ProjecaoValores 
+                    itemKey={key} 
+                    formData={formData} 
+                    setFormData={setFormData} 
+                    dataType="receitas"
+                  />
                 </div>
               )
             })}
@@ -471,6 +479,14 @@ export function ReceitasStep({ formData, setFormData }) {
                       className="mirai-input w-full"
                     />
                   </div>
+                  
+                  {/* Sistema de Projeção para custom */}
+                  <ProjecaoValores 
+                    itemKey={key} 
+                    formData={formData} 
+                    setFormData={setFormData} 
+                    dataType="receitasCustom"
+                  />
                 </div>
               ))}
             
@@ -583,6 +599,14 @@ export function DespesasStep({ formData, setFormData }) {
                   className="mirai-input w-full"
                 />
               </div>
+              
+              {/* Sistema de Projeção */}
+              <ProjecaoValores 
+                itemKey={categoria} 
+                formData={formData} 
+                setFormData={setFormData} 
+                dataType="despesas"
+              />
             </div>
           )
         })}
@@ -629,6 +653,14 @@ export function DespesasStep({ formData, setFormData }) {
                 className="mirai-input w-full"
               />
             </div>
+            
+            {/* Sistema de Projeção para custom */}
+            <ProjecaoValores 
+              itemKey={key} 
+              formData={formData} 
+              setFormData={setFormData} 
+              dataType="despesasCustom"
+            />
           </div>
         ))}
         
