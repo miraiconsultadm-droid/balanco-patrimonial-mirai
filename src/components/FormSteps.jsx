@@ -1,4 +1,5 @@
 import { Download, Send } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 export function ValoresStep({ formData, setFormData }) {
   const valoresOptions = {
@@ -130,23 +131,38 @@ export function AtivosStep({ formData, setFormData }) {
     "Outros Bens de Valor": ["Obras de arte", "Joias"]
   }
 
-  const addAtivo = (categoria, item) => {
+  const updateAtivoValor = (categoria, item, value) => {
     setFormData({
       ...formData,
-      ativos: [...formData.ativos, { categoria, item, valor: '' }]
+      ativos: {
+        ...formData.ativos,
+        [`${categoria}_${item}`]: value
+      }
     })
   }
 
-  const updateAtivo = (index, field, value) => {
-    const newAtivos = [...formData.ativos]
-    newAtivos[index][field] = value
-    setFormData({ ...formData, ativos: newAtivos })
-  }
-
-  const removeAtivo = (index) => {
+  const addCustomAtivo = (categoria) => {
+    const customCount = Object.keys(formData.ativos).filter(k => k.startsWith(`${categoria}_Outro_`)).length
+    const newKey = `${categoria}_Outro_${customCount + 1}`
     setFormData({
       ...formData,
-      ativos: formData.ativos.filter((_, i) => i !== index)
+      ativosCustom: {
+        ...(formData.ativosCustom || {}),
+        [newKey]: { nome: '', valor: '' }
+      }
+    })
+  }
+
+  const updateCustomAtivo = (key, field, value) => {
+    setFormData({
+      ...formData,
+      ativosCustom: {
+        ...(formData.ativosCustom || {}),
+        [key]: {
+          ...(formData.ativosCustom?.[key] || {}),
+          [field]: value
+        }
+      }
     })
   }
 
@@ -154,8 +170,7 @@ export function AtivosStep({ formData, setFormData }) {
     <div className="mirai-card p-6 md:p-8">
       <h2 className="text-2xl md:text-3xl font-bold mirai-text-gradient mb-4">O Que Você Tem (Ativos)</h2>
       <p className="text-foreground/80 mb-6">
-        Agora, vamos listar as coisas que você possui. Não se preocupe se não tiver muitos itens, 
-        o importante é começar a organizar.
+        Agora, vamos listar as coisas que você possui. Preencha o valor aproximado de cada item que você tem.
       </p>
 
       {Object.entries(categorias).map(([categoria, itens]) => (
@@ -164,49 +179,48 @@ export function AtivosStep({ formData, setFormData }) {
           <div className="space-y-3">
             {itens.map((item) => (
               <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <p className="text-foreground mb-2">Você possui "{item}"?</p>
-                <button
-                  onClick={() => addAtivo(categoria, item)}
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  + Adicionar
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {formData.ativos.length > 0 && (
-        <div className="mt-8 border-t border-secondary/30 pt-8">
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Seus Ativos Adicionados</h3>
-          <div className="space-y-4">
-            {formData.ativos.map((ativo, index) => (
-              <div key={index} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{ativo.categoria}</p>
-                    <p className="font-medium">{ativo.item}</p>
-                  </div>
-                  <button
-                    onClick={() => removeAtivo(index)}
-                    className="text-destructive hover:text-destructive/80 text-sm"
-                  >
-                    Remover
-                  </button>
-                </div>
+                <label className="block text-foreground mb-2">{item}</label>
                 <input
                   type="text"
-                  value={ativo.valor}
-                  onChange={(e) => updateAtivo(index, 'valor', e.target.value)}
-                  placeholder="R$ Valor aproximado"
+                  value={formData.ativos[`${categoria}_${item}`] || ''}
+                  onChange={(e) => updateAtivoValor(categoria, item, e.target.value)}
+                  placeholder="R$ Valor aproximado (deixe em branco se não possui)"
                   className="mirai-input w-full"
                 />
               </div>
             ))}
+            
+            {/* Itens personalizados */}
+            {Object.entries(formData.ativosCustom || {})
+              .filter(([key]) => key.startsWith(`${categoria}_Outro_`))
+              .map(([key, custom]) => (
+                <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+                  <input
+                    type="text"
+                    value={custom.nome || ''}
+                    onChange={(e) => updateCustomAtivo(key, 'nome', e.target.value)}
+                    placeholder="Nome do item"
+                    className="mirai-input w-full mb-2"
+                  />
+                  <input
+                    type="text"
+                    value={custom.valor || ''}
+                    onChange={(e) => updateCustomAtivo(key, 'valor', e.target.value)}
+                    placeholder="R$ Valor aproximado"
+                    className="mirai-input w-full"
+                  />
+                </div>
+              ))}
+            
+            <button
+              onClick={() => addCustomAtivo(categoria)}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              + Adicionar outro item em {categoria}
+            </button>
           </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }
@@ -221,23 +235,38 @@ export function PassivosStep({ formData, setFormData }) {
     "Outros Compromissos": ["Impostos a pagar (IPVA, IPTU)", "Plano de saúde"]
   }
 
-  const addPassivo = (categoria, item) => {
+  const updatePassivoValor = (categoria, item, value) => {
     setFormData({
       ...formData,
-      passivos: [...formData.passivos, { categoria, item, valor: '', parcelas: '' }]
+      passivos: {
+        ...formData.passivos,
+        [`${categoria}_${item}`]: value
+      }
     })
   }
 
-  const updatePassivo = (index, field, value) => {
-    const newPassivos = [...formData.passivos]
-    newPassivos[index][field] = value
-    setFormData({ ...formData, passivos: newPassivos })
-  }
-
-  const removePassivo = (index) => {
+  const addCustomPassivo = (categoria) => {
+    const customCount = Object.keys(formData.passivosCustom || {}).filter(k => k.startsWith(`${categoria}_Outro_`)).length
+    const newKey = `${categoria}_Outro_${customCount + 1}`
     setFormData({
       ...formData,
-      passivos: formData.passivos.filter((_, i) => i !== index)
+      passivosCustom: {
+        ...(formData.passivosCustom || {}),
+        [newKey]: { nome: '', valor: '' }
+      }
+    })
+  }
+
+  const updateCustomPassivo = (key, field, value) => {
+    setFormData({
+      ...formData,
+      passivosCustom: {
+        ...(formData.passivosCustom || {}),
+        [key]: {
+          ...(formData.passivosCustom?.[key] || {}),
+          [field]: value
+        }
+      }
     })
   }
 
@@ -245,8 +274,7 @@ export function PassivosStep({ formData, setFormData }) {
     <div className="mirai-card p-6 md:p-8">
       <h2 className="text-2xl md:text-3xl font-bold mirai-text-gradient mb-4">O Que Você Deve (Passivos)</h2>
       <p className="text-foreground/80 mb-6">
-        Nesta etapa, vamos organizar seus compromissos financeiros, como contas e dívidas. 
-        Ter clareza sobre isso é fundamental para sua tranquilidade.
+        Nesta etapa, vamos organizar seus compromissos financeiros. Preencha o valor de cada compromisso que você tem.
       </p>
 
       {Object.entries(categorias).map(([categoria, itens]) => (
@@ -255,58 +283,48 @@ export function PassivosStep({ formData, setFormData }) {
           <div className="space-y-3">
             {itens.map((item) => (
               <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <p className="text-foreground mb-2">Você tem "{item}"?</p>
-                <button
-                  onClick={() => addPassivo(categoria, item)}
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  + Adicionar
-                </button>
+                <label className="block text-foreground mb-2">{item}</label>
+                <input
+                  type="text"
+                  value={formData.passivos[`${categoria}_${item}`] || ''}
+                  onChange={(e) => updatePassivoValor(categoria, item, e.target.value)}
+                  placeholder="R$ Valor mensal (deixe em branco se não possui)"
+                  className="mirai-input w-full"
+                />
               </div>
             ))}
+            
+            {/* Itens personalizados */}
+            {Object.entries(formData.passivosCustom || {})
+              .filter(([key]) => key.startsWith(`${categoria}_Outro_`))
+              .map(([key, custom]) => (
+                <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+                  <input
+                    type="text"
+                    value={custom.nome || ''}
+                    onChange={(e) => updateCustomPassivo(key, 'nome', e.target.value)}
+                    placeholder="Nome do compromisso"
+                    className="mirai-input w-full mb-2"
+                  />
+                  <input
+                    type="text"
+                    value={custom.valor || ''}
+                    onChange={(e) => updateCustomPassivo(key, 'valor', e.target.value)}
+                    placeholder="R$ Valor mensal"
+                    className="mirai-input w-full"
+                  />
+                </div>
+              ))}
+            
+            <button
+              onClick={() => addCustomPassivo(categoria)}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              + Adicionar outro item em {categoria}
+            </button>
           </div>
         </div>
       ))}
-
-      {formData.passivos.length > 0 && (
-        <div className="mt-8 border-t border-secondary/30 pt-8">
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Seus Passivos Adicionados</h3>
-          <div className="space-y-4">
-            {formData.passivos.map((passivo, index) => (
-              <div key={index} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{passivo.categoria}</p>
-                    <p className="font-medium">{passivo.item}</p>
-                  </div>
-                  <button
-                    onClick={() => removePassivo(index)}
-                    className="text-destructive hover:text-destructive/80 text-sm"
-                  >
-                    Remover
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    value={passivo.valor}
-                    onChange={(e) => updatePassivo(index, 'valor', e.target.value)}
-                    placeholder="R$ Valor da parcela ou conta"
-                    className="mirai-input w-full"
-                  />
-                  <input
-                    type="text"
-                    value={passivo.parcelas}
-                    onChange={(e) => updatePassivo(index, 'parcelas', e.target.value)}
-                    placeholder="Quantas parcelas faltam?"
-                    className="mirai-input w-full"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -318,23 +336,42 @@ export function ReceitasStep({ formData, setFormData }) {
     "Outras Fontes": ["Aposentadoria ou pensão", "Renda de um segundo trabalho ou 'bico'"]
   }
 
-  const addReceita = (categoria, item) => {
+  const updateReceita = (categoria, item, field, value) => {
+    const key = `${categoria}_${item}`
     setFormData({
       ...formData,
-      receitas: [...formData.receitas, { categoria, item, valor: '' }]
+      receitas: {
+        ...formData.receitas,
+        [key]: {
+          ...(formData.receitas[key] || {}),
+          [field]: value
+        }
+      }
     })
   }
 
-  const updateReceita = (index, field, value) => {
-    const newReceitas = [...formData.receitas]
-    newReceitas[index][field] = value
-    setFormData({ ...formData, receitas: newReceitas })
-  }
-
-  const removeReceita = (index) => {
+  const addCustomReceita = (categoria) => {
+    const customCount = Object.keys(formData.receitasCustom || {}).filter(k => k.startsWith(`${categoria}_Outro_`)).length
+    const newKey = `${categoria}_Outro_${customCount + 1}`
     setFormData({
       ...formData,
-      receitas: formData.receitas.filter((_, i) => i !== index)
+      receitasCustom: {
+        ...(formData.receitasCustom || {}),
+        [newKey]: { nome: '', valor: '', frequencia: '', inicio: '', fim: '' }
+      }
+    })
+  }
+
+  const updateCustomReceita = (key, field, value) => {
+    setFormData({
+      ...formData,
+      receitasCustom: {
+        ...(formData.receitasCustom || {}),
+        [key]: {
+          ...(formData.receitasCustom?.[key] || {}),
+          [field]: value
+        }
+      }
     })
   }
 
@@ -342,59 +379,111 @@ export function ReceitasStep({ formData, setFormData }) {
     <div className="mirai-card p-6 md:p-8">
       <h2 className="text-2xl md:text-3xl font-bold mirai-text-gradient mb-4">O Que Você Recebe (Receitas)</h2>
       <p className="text-foreground/80 mb-6">
-        Aqui, vamos anotar todo o dinheiro que entra na sua casa. 
-        Isso nos ajuda a entender o total da sua renda.
+        Aqui, vamos anotar todo o dinheiro que entra. Preencha valor, frequência e período de cada fonte de renda.
       </p>
 
       {Object.entries(categorias).map(([categoria, itens]) => (
         <div key={categoria} className="mb-8">
           <h3 className="text-xl font-semibold mb-4 text-primary">{categoria}</h3>
-          <div className="space-y-3">
-            {itens.map((item) => (
-              <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <p className="text-foreground mb-2">Você recebe dinheiro de "{item}"?</p>
-                <button
-                  onClick={() => addReceita(categoria, item)}
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  + Adicionar
-                </button>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {itens.map((item) => {
+              const key = `${categoria}_${item}`
+              const receita = formData.receitas[key] || {}
+              return (
+                <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+                  <label className="block text-foreground mb-3 font-medium">{item}</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <input
+                      type="text"
+                      value={receita.valor || ''}
+                      onChange={(e) => updateReceita(categoria, item, 'valor', e.target.value)}
+                      placeholder="R$ Valor"
+                      className="mirai-input w-full"
+                    />
+                    <select
+                      value={receita.frequencia || ''}
+                      onChange={(e) => updateReceita(categoria, item, 'frequencia', e.target.value)}
+                      className="mirai-input w-full"
+                    >
+                      <option value="">Frequência</option>
+                      <option value="mensal">Mensal</option>
+                      <option value="anual">Anual</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={receita.inicio || ''}
+                      onChange={(e) => updateReceita(categoria, item, 'inicio', e.target.value)}
+                      placeholder="Início (ano)"
+                      className="mirai-input w-full"
+                    />
+                    <input
+                      type="text"
+                      value={receita.fim || ''}
+                      onChange={(e) => updateReceita(categoria, item, 'fim', e.target.value)}
+                      placeholder="Fim (ano)"
+                      className="mirai-input w-full"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+            
+            {/* Receitas personalizadas */}
+            {Object.entries(formData.receitasCustom || {})
+              .filter(([key]) => key.startsWith(`${categoria}_Outro_`))
+              .map(([key, custom]) => (
+                <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+                  <input
+                    type="text"
+                    value={custom.nome || ''}
+                    onChange={(e) => updateCustomReceita(key, 'nome', e.target.value)}
+                    placeholder="Nome da receita"
+                    className="mirai-input w-full mb-3"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <input
+                      type="text"
+                      value={custom.valor || ''}
+                      onChange={(e) => updateCustomReceita(key, 'valor', e.target.value)}
+                      placeholder="R$ Valor"
+                      className="mirai-input w-full"
+                    />
+                    <select
+                      value={custom.frequencia || ''}
+                      onChange={(e) => updateCustomReceita(key, 'frequencia', e.target.value)}
+                      className="mirai-input w-full"
+                    >
+                      <option value="">Frequência</option>
+                      <option value="mensal">Mensal</option>
+                      <option value="anual">Anual</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={custom.inicio || ''}
+                      onChange={(e) => updateCustomReceita(key, 'inicio', e.target.value)}
+                      placeholder="Início (ano)"
+                      className="mirai-input w-full"
+                    />
+                    <input
+                      type="text"
+                      value={custom.fim || ''}
+                      onChange={(e) => updateCustomReceita(key, 'fim', e.target.value)}
+                      placeholder="Fim (ano)"
+                      className="mirai-input w-full"
+                    />
+                  </div>
+                </div>
+              ))}
+            
+            <button
+              onClick={() => addCustomReceita(categoria)}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              + Adicionar outra receita em {categoria}
+            </button>
           </div>
         </div>
       ))}
-
-      {formData.receitas.length > 0 && (
-        <div className="mt-8 border-t border-secondary/30 pt-8">
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Suas Receitas Adicionadas</h3>
-          <div className="space-y-4">
-            {formData.receitas.map((receita, index) => (
-              <div key={index} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{receita.categoria}</p>
-                    <p className="font-medium">{receita.item}</p>
-                  </div>
-                  <button
-                    onClick={() => removeReceita(index)}
-                    className="text-destructive hover:text-destructive/80 text-sm"
-                  >
-                    Remover
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={receita.valor}
-                  onChange={(e) => updateReceita(index, 'valor', e.target.value)}
-                  placeholder="R$ Valor mensal"
-                  className="mirai-input w-full"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -411,23 +500,42 @@ export function DespesasStep({ formData, setFormData }) {
     "Filhos e Pets": ["Mesada", "Gastos com material escolar", "Ração e veterinário"]
   }
 
-  const addDespesa = (categoria, item) => {
+  const updateDespesa = (categoria, item, field, value) => {
+    const key = `${categoria}_${item}`
     setFormData({
       ...formData,
-      despesas: [...formData.despesas, { categoria, item, valor: '' }]
+      despesas: {
+        ...formData.despesas,
+        [key]: {
+          ...(formData.despesas[key] || {}),
+          [field]: value
+        }
+      }
     })
   }
 
-  const updateDespesa = (index, field, value) => {
-    const newDespesas = [...formData.despesas]
-    newDespesas[index][field] = value
-    setFormData({ ...formData, despesas: newDespesas })
-  }
-
-  const removeDespesa = (index) => {
+  const addCustomDespesa = (categoria) => {
+    const customCount = Object.keys(formData.despesasCustom || {}).filter(k => k.startsWith(`${categoria}_Outro_`)).length
+    const newKey = `${categoria}_Outro_${customCount + 1}`
     setFormData({
       ...formData,
-      despesas: formData.despesas.filter((_, i) => i !== index)
+      despesasCustom: {
+        ...(formData.despesasCustom || {}),
+        [newKey]: { nome: '', valor: '', frequencia: '', inicio: '', fim: '' }
+      }
+    })
+  }
+
+  const updateCustomDespesa = (key, field, value) => {
+    setFormData({
+      ...formData,
+      despesasCustom: {
+        ...(formData.despesasCustom || {}),
+        [key]: {
+          ...(formData.despesasCustom?.[key] || {}),
+          [field]: value
+        }
+      }
     })
   }
 
@@ -435,87 +543,436 @@ export function DespesasStep({ formData, setFormData }) {
     <div className="mirai-card p-6 md:p-8">
       <h2 className="text-2xl md:text-3xl font-bold mirai-text-gradient mb-4">O Que Você Gasta (Despesas)</h2>
       <p className="text-foreground/80 mb-6">
-        Para finalizar, vamos entender para onde vai o seu dinheiro no dia a dia. 
-        Anote os gastos mensais da sua família.
+        Vamos entender para onde vai o seu dinheiro. Preencha valor, frequência e período de cada gasto.
       </p>
 
       {Object.entries(categorias).map(([categoria, itens]) => (
         <div key={categoria} className="mb-8">
           <h3 className="text-xl font-semibold mb-4 text-primary">{categoria}</h3>
-          <div className="space-y-3">
-            {itens.map((item) => (
-              <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <p className="text-foreground mb-2">Qual o seu gasto mensal com "{item}"?</p>
-                <button
-                  onClick={() => addDespesa(categoria, item)}
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  + Adicionar
-                </button>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {itens.map((item) => {
+              const key = `${categoria}_${item}`
+              const despesa = formData.despesas[key] || {}
+              return (
+                <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+                  <label className="block text-foreground mb-3 font-medium">{item}</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <input
+                      type="text"
+                      value={despesa.valor || ''}
+                      onChange={(e) => updateDespesa(categoria, item, 'valor', e.target.value)}
+                      placeholder="R$ Valor"
+                      className="mirai-input w-full"
+                    />
+                    <select
+                      value={despesa.frequencia || ''}
+                      onChange={(e) => updateDespesa(categoria, item, 'frequencia', e.target.value)}
+                      className="mirai-input w-full"
+                    >
+                      <option value="">Frequência</option>
+                      <option value="mensal">Mensal</option>
+                      <option value="anual">Anual</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={despesa.inicio || ''}
+                      onChange={(e) => updateDespesa(categoria, item, 'inicio', e.target.value)}
+                      placeholder="Início (ano)"
+                      className="mirai-input w-full"
+                    />
+                    <input
+                      type="text"
+                      value={despesa.fim || ''}
+                      onChange={(e) => updateDespesa(categoria, item, 'fim', e.target.value)}
+                      placeholder="Fim (ano)"
+                      className="mirai-input w-full"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+            
+            {/* Despesas personalizadas */}
+            {Object.entries(formData.despesasCustom || {})
+              .filter(([key]) => key.startsWith(`${categoria}_Outro_`))
+              .map(([key, custom]) => (
+                <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+                  <input
+                    type="text"
+                    value={custom.nome || ''}
+                    onChange={(e) => updateCustomDespesa(key, 'nome', e.target.value)}
+                    placeholder="Nome da despesa"
+                    className="mirai-input w-full mb-3"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <input
+                      type="text"
+                      value={custom.valor || ''}
+                      onChange={(e) => updateCustomDespesa(key, 'valor', e.target.value)}
+                      placeholder="R$ Valor"
+                      className="mirai-input w-full"
+                    />
+                    <select
+                      value={custom.frequencia || ''}
+                      onChange={(e) => updateCustomDespesa(key, 'frequencia', e.target.value)}
+                      className="mirai-input w-full"
+                    >
+                      <option value="">Frequência</option>
+                      <option value="mensal">Mensal</option>
+                      <option value="anual">Anual</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={custom.inicio || ''}
+                      onChange={(e) => updateCustomDespesa(key, 'inicio', e.target.value)}
+                      placeholder="Início (ano)"
+                      className="mirai-input w-full"
+                    />
+                    <input
+                      type="text"
+                      value={custom.fim || ''}
+                      onChange={(e) => updateCustomDespesa(key, 'fim', e.target.value)}
+                      placeholder="Fim (ano)"
+                      className="mirai-input w-full"
+                    />
+                  </div>
+                </div>
+              ))}
+            
+            <button
+              onClick={() => addCustomDespesa(categoria)}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              + Adicionar outra despesa em {categoria}
+            </button>
           </div>
         </div>
       ))}
+    </div>
+  )
+}
 
-      {formData.despesas.length > 0 && (
-        <div className="mt-8 border-t border-secondary/30 pt-8">
-          <h3 className="text-xl font-semibold mb-4 text-secondary">Suas Despesas Adicionadas</h3>
-          <div className="space-y-4">
-            {formData.despesas.map((despesa, index) => (
-              <div key={index} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{despesa.categoria}</p>
-                    <p className="font-medium">{despesa.item}</p>
-                  </div>
-                  <button
-                    onClick={() => removeDespesa(index)}
-                    className="text-destructive hover:text-destructive/80 text-sm"
-                  >
-                    Remover
-                  </button>
-                </div>
+export function InvestimentosFuturosStep({ formData, setFormData }) {
+  const sugestoes = [
+    "Educação para filhos",
+    "Comprar casa",
+    "Casamento dos filhos",
+    "Aumentar periodicidade de viagens",
+    "Comprar imóveis",
+    "Morar no exterior",
+    "Cursos no exterior",
+    "Aposentadoria antecipada",
+    "Abrir um negócio próprio",
+    "Reforma da casa"
+  ]
+
+  const updateInvestimento = (item, field, value) => {
+    setFormData({
+      ...formData,
+      investimentosFuturos: {
+        ...formData.investimentosFuturos,
+        [item]: {
+          ...(formData.investimentosFuturos[item] || {}),
+          [field]: value
+        }
+      }
+    })
+  }
+
+  const addCustomInvestimento = () => {
+    const customCount = Object.keys(formData.investimentosFuturos || {}).filter(k => k.startsWith('Outro_')).length
+    const newKey = `Outro_${customCount + 1}`
+    setFormData({
+      ...formData,
+      investimentosFuturos: {
+        ...formData.investimentosFuturos,
+        [newKey]: { valor: '', frequencia: '', inicio: '', fim: '', nome: '', observacoes: '' }
+      }
+    })
+  }
+
+  return (
+    <div className="mirai-card p-6 md:p-8">
+      <h2 className="text-2xl md:text-3xl font-bold mirai-text-gradient mb-4">Investimentos e Gastos Futuros</h2>
+      <p className="text-foreground/80 mb-6">
+        Vamos planejar seus sonhos e projetos futuros. Preencha os valores e períodos para cada objetivo.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        {sugestoes.map((item) => {
+          const investimento = formData.investimentosFuturos?.[item] || {}
+          return (
+            <div key={item} className="bg-card/50 p-4 rounded-lg border border-secondary/30">
+              <label className="block text-foreground mb-3 font-medium">{item}</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                 <input
                   type="text"
-                  value={despesa.valor}
-                  onChange={(e) => updateDespesa(index, 'valor', e.target.value)}
-                  placeholder="R$ Valor mensal aproximado"
+                  value={investimento.valor || ''}
+                  onChange={(e) => updateInvestimento(item, 'valor', e.target.value)}
+                  placeholder="R$ Valor total"
+                  className="mirai-input w-full"
+                />
+                <select
+                  value={investimento.frequencia || ''}
+                  onChange={(e) => updateInvestimento(item, 'frequencia', e.target.value)}
+                  className="mirai-input w-full"
+                >
+                  <option value="">Frequência</option>
+                  <option value="mensal">Mensal</option>
+                  <option value="anual">Anual</option>
+                  <option value="unico">Pagamento Único</option>
+                </select>
+                <input
+                  type="text"
+                  value={investimento.inicio || ''}
+                  onChange={(e) => updateInvestimento(item, 'inicio', e.target.value)}
+                  placeholder="Início (ano)"
+                  className="mirai-input w-full"
+                />
+                <input
+                  type="text"
+                  value={investimento.fim || ''}
+                  onChange={(e) => updateInvestimento(item, 'fim', e.target.value)}
+                  placeholder="Fim (ano)"
                   className="mirai-input w-full"
                 />
               </div>
-            ))}
+              <textarea
+                value={investimento.observacoes || ''}
+                onChange={(e) => updateInvestimento(item, 'observacoes', e.target.value)}
+                placeholder="Observações (opcional)"
+                className="mirai-input w-full min-h-20 resize-y"
+              />
+            </div>
+          )
+        })}
+      </div>
+
+      {Object.entries(formData.investimentosFuturos || {}).filter(([k]) => k.startsWith('Outro_')).map(([key, investimento]) => (
+        <div key={key} className="bg-card/50 p-4 rounded-lg border border-secondary/30 mb-4">
+          <input
+            type="text"
+            value={investimento.nome || ''}
+            onChange={(e) => updateInvestimento(key, 'nome', e.target.value)}
+            placeholder="Nome do investimento/gasto futuro"
+            className="mirai-input w-full mb-3"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <input
+              type="text"
+              value={investimento.valor || ''}
+              onChange={(e) => updateInvestimento(key, 'valor', e.target.value)}
+              placeholder="R$ Valor total"
+              className="mirai-input w-full"
+            />
+            <select
+              value={investimento.frequencia || ''}
+              onChange={(e) => updateInvestimento(key, 'frequencia', e.target.value)}
+              className="mirai-input w-full"
+            >
+              <option value="">Frequência</option>
+              <option value="mensal">Mensal</option>
+              <option value="anual">Anual</option>
+              <option value="unico">Pagamento Único</option>
+            </select>
+            <input
+              type="text"
+              value={investimento.inicio || ''}
+              onChange={(e) => updateInvestimento(key, 'inicio', e.target.value)}
+              placeholder="Início (ano)"
+              className="mirai-input w-full"
+            />
+            <input
+              type="text"
+              value={investimento.fim || ''}
+              onChange={(e) => updateInvestimento(key, 'fim', e.target.value)}
+              placeholder="Fim (ano)"
+              className="mirai-input w-full"
+            />
           </div>
+          <textarea
+            value={investimento.observacoes || ''}
+            onChange={(e) => updateInvestimento(key, 'observacoes', e.target.value)}
+            placeholder="Observações (opcional)"
+            className="mirai-input w-full min-h-20 resize-y"
+          />
         </div>
-      )}
+      ))}
+
+      <button
+        onClick={addCustomInvestimento}
+        className="mirai-button w-full md:w-auto"
+      >
+        + Adicionar Outro Investimento/Gasto Futuro
+      </button>
     </div>
   )
 }
 
 export function FinalStep({ formData }) {
-  const downloadJSON = () => {
-    const dataStr = JSON.stringify(formData, null, 2)
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
-    const exportFileDefaultName = `balanco_patrimonial_${new Date().toISOString().split('T')[0]}.json`
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new()
     
-    const linkElement = document.createElement('a')
-    linkElement.setAttribute('href', dataUri)
-    linkElement.setAttribute('download', exportFileDefaultName)
-    linkElement.click()
+    // Valores
+    const valoresData = []
+    valoresData.push(['VALORES SELECIONADOS'])
+    valoresData.push([])
+    Object.entries(formData.valores).forEach(([categoria, valores]) => {
+      valoresData.push([categoria.toUpperCase(), valores.join(', ')])
+    })
+    valoresData.push([])
+    
+    // Sonhos
+    valoresData.push(['SONHOS, MEDOS E DESAFIOS'])
+    valoresData.push([])
+    Object.entries(formData.sonhos).forEach(([campo, resposta]) => {
+      valoresData.push([campo, resposta])
+    })
+    
+    const wsValores = XLSX.utils.aoa_to_sheet(valoresData)
+    XLSX.utils.book_append_sheet(wb, wsValores, 'Valores e Sonhos')
+    
+    // Ativos
+    const ativosData = [['ATIVOS'], [], ['Item', 'Valor']]
+    Object.entries(formData.ativos).forEach(([key, valor]) => {
+      if (valor) ativosData.push([key.replace(/_/g, ' - '), valor])
+    })
+    Object.entries(formData.ativosCustom || {}).forEach(([key, custom]) => {
+      if (custom.valor) ativosData.push([custom.nome, custom.valor])
+    })
+    const wsAtivos = XLSX.utils.aoa_to_sheet(ativosData)
+    XLSX.utils.book_append_sheet(wb, wsAtivos, 'Ativos')
+    
+    // Passivos
+    const passivosData = [['PASSIVOS'], [], ['Item', 'Valor']]
+    Object.entries(formData.passivos).forEach(([key, valor]) => {
+      if (valor) passivosData.push([key.replace(/_/g, ' - '), valor])
+    })
+    Object.entries(formData.passivosCustom || {}).forEach(([key, custom]) => {
+      if (custom.valor) passivosData.push([custom.nome, custom.valor])
+    })
+    const wsPassivos = XLSX.utils.aoa_to_sheet(passivosData)
+    XLSX.utils.book_append_sheet(wb, wsPassivos, 'Passivos')
+    
+    // Receitas
+    const receitasData = [['RECEITAS'], [], ['Item', 'Valor', 'Frequência', 'Início', 'Fim']]
+    Object.entries(formData.receitas).forEach(([key, receita]) => {
+      if (receita.valor) {
+        receitasData.push([
+          key.replace(/_/g, ' - '),
+          receita.valor || '',
+          receita.frequencia || '',
+          receita.inicio || '',
+          receita.fim || ''
+        ])
+      }
+    })
+    Object.entries(formData.receitasCustom || {}).forEach(([key, custom]) => {
+      if (custom.valor) {
+        receitasData.push([
+          custom.nome,
+          custom.valor || '',
+          custom.frequencia || '',
+          custom.inicio || '',
+          custom.fim || ''
+        ])
+      }
+    })
+    const wsReceitas = XLSX.utils.aoa_to_sheet(receitasData)
+    XLSX.utils.book_append_sheet(wb, wsReceitas, 'Receitas')
+    
+    // Despesas
+    const despesasData = [['DESPESAS'], [], ['Item', 'Valor', 'Frequência', 'Início', 'Fim']]
+    Object.entries(formData.despesas).forEach(([key, despesa]) => {
+      if (despesa.valor) {
+        despesasData.push([
+          key.replace(/_/g, ' - '),
+          despesa.valor || '',
+          despesa.frequencia || '',
+          despesa.inicio || '',
+          despesa.fim || ''
+        ])
+      }
+    })
+    Object.entries(formData.despesasCustom || {}).forEach(([key, custom]) => {
+      if (custom.valor) {
+        despesasData.push([
+          custom.nome,
+          custom.valor || '',
+          custom.frequencia || '',
+          custom.inicio || '',
+          custom.fim || ''
+        ])
+      }
+    })
+    const wsDespesas = XLSX.utils.aoa_to_sheet(despesasData)
+    XLSX.utils.book_append_sheet(wb, wsDespesas, 'Despesas')
+    
+    // Investimentos Futuros
+    const investimentosData = [['INVESTIMENTOS E GASTOS FUTUROS'], [], ['Item', 'Valor', 'Frequência', 'Início', 'Fim', 'Observações']]
+    Object.entries(formData.investimentosFuturos || {}).forEach(([key, inv]) => {
+      if (inv.valor) {
+        const nome = key.startsWith('Outro_') ? inv.nome : key
+        investimentosData.push([
+          nome,
+          inv.valor || '',
+          inv.frequencia || '',
+          inv.inicio || '',
+          inv.fim || '',
+          inv.observacoes || ''
+        ])
+      }
+    })
+    const wsInvestimentos = XLSX.utils.aoa_to_sheet(investimentosData)
+    XLSX.utils.book_append_sheet(wb, wsInvestimentos, 'Investimentos Futuros')
+    
+    XLSX.writeFile(wb, `balanco_patrimonial_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
-  const sendEmail = () => {
-    const subject = 'Balanço Patrimonial Pessoal - Preenchido'
-    const body = `Olá, segue meu Balanço Patrimonial Pessoal preenchido.\n\nPor favor, baixe o arquivo JSON anexo para análise.`
-    window.location.href = `mailto:contato@mirai.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  const sendToN8N = async () => {
+    try {
+      // Primeiro, baixa o Excel
+      exportToExcel()
+      
+      // Envia para o webhook do n8n
+      const response = await fetch('https://diegokek.app.n8n.cloud/webhook/balançopatrimonial', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: formData,
+          timestamp: new Date().toISOString(),
+          resumo: {
+            valores_selecionados: Object.values(formData.valores).reduce((acc, arr) => acc + arr.length, 0),
+            ativos_preenchidos: Object.values(formData.ativos).filter(v => v).length + Object.values(formData.ativosCustom || {}).filter(c => c.valor).length,
+            passivos_preenchidos: Object.values(formData.passivos).filter(v => v).length + Object.values(formData.passivosCustom || {}).filter(c => c.valor).length,
+            receitas_cadastradas: Object.values(formData.receitas).filter(r => r.valor).length + Object.values(formData.receitasCustom || {}).filter(c => c.valor).length,
+            despesas_cadastradas: Object.values(formData.despesas).filter(d => d.valor).length + Object.values(formData.despesasCustom || {}).filter(c => c.valor).length,
+            investimentos_futuros: Object.values(formData.investimentosFuturos || {}).filter(i => i.valor).length
+          }
+        })
+      })
+
+      if (response.ok) {
+        // Limpa os dados salvos após envio bem-sucedido
+        localStorage.removeItem('balancoPatrimonialData')
+        alert('✅ Sucesso! Arquivo Excel baixado e dados enviados automaticamente para a equipe MirAI!\n\nOs dados salvos foram limpos. Você pode preencher um novo formulário agora.')
+      } else {
+        throw new Error('Erro ao enviar para n8n')
+      }
+      
+    } catch (error) {
+      console.error('Erro ao enviar para n8n:', error)
+      alert('✅ Arquivo Excel baixado com sucesso!\n\n⚠️ Houve um problema ao enviar os dados automaticamente. Por favor, envie o arquivo Excel manualmente para diegoelkek@gmail.com')
+    }
   }
 
   return (
     <div className="mirai-card p-8 md:p-12 text-center space-y-6">
       <h2 className="text-3xl md:text-4xl font-bold mirai-text-gradient">Parabéns! Você concluiu o formulário!</h2>
       <p className="text-lg text-foreground/90 max-w-2xl mx-auto">
-        Agora você pode baixar suas respostas e enviá-las para nossa equipe. 
-        Vamos analisar suas informações e preparar seu fluxo de caixa personalizado.
+        Agora você pode baixar suas respostas em Excel. Os dados também serão enviados automaticamente para nossa equipe.
       </p>
 
       <div className="bg-card/50 p-6 rounded-lg border border-secondary/30 text-left max-w-2xl mx-auto">
@@ -528,38 +985,43 @@ export function FinalStep({ formData }) {
             </span>
           </li>
           <li className="flex justify-between">
-            <span>Ativos cadastrados:</span>
-            <span className="font-semibold">{formData.ativos.length}</span>
+            <span>Ativos preenchidos:</span>
+            <span className="font-semibold">
+              {Object.values(formData.ativos).filter(v => v).length + Object.values(formData.ativosCustom || {}).filter(c => c.valor).length}
+            </span>
           </li>
           <li className="flex justify-between">
-            <span>Passivos cadastrados:</span>
-            <span className="font-semibold">{formData.passivos.length}</span>
+            <span>Passivos preenchidos:</span>
+            <span className="font-semibold">
+              {Object.values(formData.passivos).filter(v => v).length + Object.values(formData.passivosCustom || {}).filter(c => c.valor).length}
+            </span>
           </li>
           <li className="flex justify-between">
             <span>Receitas cadastradas:</span>
-            <span className="font-semibold">{formData.receitas.length}</span>
+            <span className="font-semibold">
+              {Object.values(formData.receitas).filter(r => r.valor).length + Object.values(formData.receitasCustom || {}).filter(c => c.valor).length}
+            </span>
           </li>
           <li className="flex justify-between">
             <span>Despesas cadastradas:</span>
-            <span className="font-semibold">{formData.despesas.length}</span>
+            <span className="font-semibold">
+              {Object.values(formData.despesas).filter(d => d.valor).length + Object.values(formData.despesasCustom || {}).filter(c => c.valor).length}
+            </span>
+          </li>
+          <li className="flex justify-between">
+            <span>Investimentos futuros:</span>
+            <span className="font-semibold">{Object.values(formData.investimentosFuturos || {}).filter(i => i.valor).length}</span>
           </li>
         </ul>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 justify-center mt-8">
         <button
-          onClick={downloadJSON}
-          className="mirai-button flex items-center gap-2 justify-center"
-        >
-          <Download className="w-5 h-5" />
-          Baixar Respostas (JSON)
-        </button>
-        <button
-          onClick={sendEmail}
+          onClick={sendToN8N}
           className="mirai-button flex items-center gap-2 justify-center"
         >
           <Send className="w-5 h-5" />
-          Enviar por E-mail
+          Enviar e Baixar Excel
         </button>
       </div>
 

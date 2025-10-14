@@ -1,28 +1,102 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import miraiLogo from './assets/mirai_logo_transparente_v2.png'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
-import { ValoresStep, AtivosStep, PassivosStep, ReceitasStep, DespesasStep, FinalStep } from './components/FormSteps'
+import { ValoresStep, AtivosStep, PassivosStep, ReceitasStep, DespesasStep, InvestimentosFuturosStep, FinalStep } from './components/FormSteps'
 
 function App() {
   const [currentStep, setCurrentStep] = useState(0)
-  const [formData, setFormData] = useState({
-    valores: { saude: [], financas: [], trabalho: [], relacionamentos: [], espiritualidade: [] },
-    sonhos: { riqueza: '', proposito: '', receio: '', sobra: '', futuro5anos: '', futuro10anos: '', sonhosDesejos: '', angustiasMedos: '', legado: '' },
-    ativos: [],
-    passivos: [],
-    receitas: [],
-    despesas: []
-  })
+  
+  // Tenta carregar dados salvos do localStorage
+  const getInitialFormData = () => {
+    try {
+      const savedData = localStorage.getItem('balancoPatrimonialData')
+      if (savedData) {
+        return JSON.parse(savedData)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados salvos:', error)
+    }
+    return {
+      valores: { saude: [], financas: [], trabalho: [], relacionamentos: [], espiritualidade: [] },
+      sonhos: { riqueza: '', proposito: '', receio: '', sobra: '', futuro5anos: '', futuro10anos: '', sonhosDesejos: '', angustiasMedos: '', legado: '' },
+      ativos: {},
+      ativosCustom: {},
+      passivos: {},
+      passivosCustom: {},
+      receitas: {},
+      receitasCustom: {},
+      despesas: {},
+      despesasCustom: {},
+      investimentosFuturos: {}
+    }
+  }
+  
+  const [formData, setFormData] = useState(getInitialFormData)
+  const [showSavedNotification, setShowSavedNotification] = useState(false)
+  
+  // Verifica se há dados salvos ao carregar
+  useEffect(() => {
+    const savedData = localStorage.getItem('balancoPatrimonialData')
+    if (savedData) {
+      const hasData = Object.values(JSON.parse(savedData)).some(value => {
+        if (typeof value === 'object' && value !== null) {
+          return Object.keys(value).length > 0
+        }
+        return false
+      })
+      if (hasData) {
+        setTimeout(() => {
+          alert('💾 Bem-vindo de volta! Seus dados foram recuperados automaticamente. Você pode continuar de onde parou.')
+        }, 500)
+      }
+    }
+  }, [])
+  
+  // Salva automaticamente no localStorage sempre que formData mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem('balancoPatrimonialData', JSON.stringify(formData))
+      // Mostra notificação de salvamento
+      setShowSavedNotification(true)
+      const timer = setTimeout(() => setShowSavedNotification(false), 2000)
+      return () => clearTimeout(timer)
+    } catch (error) {
+      console.error('Erro ao salvar dados:', error)
+    }
+  }, [formData])
+  
+  // Função para limpar o formulário
+  const clearForm = () => {
+    if (window.confirm('Tem certeza que deseja limpar todos os dados do formulário? Esta ação não pode ser desfeita.')) {
+      localStorage.removeItem('balancoPatrimonialData')
+      setFormData({
+        valores: { saude: [], financas: [], trabalho: [], relacionamentos: [], espiritualidade: [] },
+        sonhos: { riqueza: '', proposito: '', receio: '', sobra: '', futuro5anos: '', futuro10anos: '', sonhosDesejos: '', angustiasMedos: '', legado: '' },
+        ativos: {},
+        ativosCustom: {},
+        passivos: {},
+        passivosCustom: {},
+        receitas: {},
+        receitasCustom: {},
+        despesas: {},
+        despesasCustom: {},
+        investimentosFuturos: {}
+      })
+      setCurrentStep(0)
+      alert('✅ Formulário limpo com sucesso!')
+    }
+  }
 
   const steps = [
     { id: 0, title: 'Bem-vindo', component: WelcomeStep },
     { id: 1, title: 'Valores e Sonhos', component: ValoresStep },
-    { id: 2, title: 'O Que Você Tem', component: AtivosStep },
-    { id: 3, title: 'O Que Você Deve', component: PassivosStep },
-    { id: 4, title: 'O Que Você Recebe', component: ReceitasStep },
-    { id: 5, title: 'O Que Você Gasta', component: DespesasStep },
-    { id: 6, title: 'Finalizar', component: FinalStep }
+    { id: 2, title: 'Ativos', component: AtivosStep },
+    { id: 3, title: 'Passivos', component: PassivosStep },
+    { id: 4, title: 'Receitas', component: ReceitasStep },
+    { id: 5, title: 'Despesas', component: DespesasStep },
+    { id: 6, title: 'Investimentos Futuros', component: InvestimentosFuturosStep },
+    { id: 7, title: 'Finalizar', component: FinalStep }
   ]
 
   const nextStep = () => {
@@ -46,10 +120,27 @@ function App() {
       <header className="border-b border-secondary/30 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <img src={miraiLogo} alt="MirAI Logo" className="h-12" />
-          <h1 className="text-xl md:text-2xl font-bold mirai-text-gradient">
-            Balanço Patrimonial Pessoal
-          </h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl md:text-2xl font-bold mirai-text-gradient">
+              Balanço Patrimonial Pessoal
+            </h1>
+            {currentStep > 0 && currentStep < steps.length - 1 && (
+              <button
+                onClick={clearForm}
+                className="text-sm text-destructive hover:text-destructive/80 transition-colors hidden md:block"
+                title="Limpar todos os dados"
+              >
+                Limpar Formulário
+              </button>
+            )}
+          </div>
         </div>
+        {/* Notificação de salvamento automático */}
+        {showSavedNotification && (
+          <div className="fixed top-20 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in">
+            ✔️ Dados salvos automaticamente
+          </div>
+        )}
       </header>
 
       <div className="container mx-auto px-4 py-6">
