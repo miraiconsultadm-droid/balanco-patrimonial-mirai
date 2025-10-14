@@ -2,7 +2,6 @@ import React from 'react'
 import { Download, Send } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { ProjecaoValores } from './ProjecaoValores'
-import { supabase } from '../supabaseClient'
 
 export function ValoresStep({ formData, setFormData }) {
   const valoresOptions = {
@@ -954,33 +953,12 @@ export function FinalStep({ formData }) {
     XLSX.writeFile(wb, `balanco_patrimonial_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
-  const sendToN8N = async () => {
+    const sendToN8N = async () => {
     try {
-      // 1. Criar conta no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.auth.email,
-        password: formData.auth.senha,
-        options: {
-          data: {
-            nome_familia: formData.auth.nomeFamilia
-          }
-        }
-      })
-
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          alert('⚠️ Este email já está cadastrado. Por favor, use outro email ou faça login no dashboard.')
-          return
-        }
-        throw authError
-      }
-
-      const userId = authData.user?.id
-
-      // 2. Baixa o Excel
+      // 1. Baixa o Excel
       exportToExcel()
       
-      // 3. Envia para o webhook do n8n (incluindo senha em texto claro)
+      // 2. Envia para o webhook do n8n
       const response = await fetch('https://diegokek.app.n8n.cloud/webhook/balançopatrimonial', {
         method: 'POST',
         headers: {
@@ -990,8 +968,7 @@ export function FinalStep({ formData }) {
           auth: {
             email: formData.auth.email,
             senha: formData.auth.senha,
-            nome_familia: formData.auth.nomeFamilia,
-            user_id: userId
+            nome_familia: formData.auth.nomeFamilia
           },
           data: formData,
           timestamp: new Date().toISOString(),
@@ -1009,7 +986,11 @@ export function FinalStep({ formData }) {
       if (response.ok) {
         // Limpa os dados salvos após envio bem-sucedido
         localStorage.removeItem('balancoPatrimonialData')
-        alert(`✅ Sucesso! Conta criada e dados enviados!\n\n📧 Email: ${formData.auth.email}\n\nVocê receberá um email de confirmação. Depois poderá acessar seu dashboard em:\ndashboard.miraiconsult.com\n\nOs dados salvos foram limpos.`)
+        alert(`✅ Sucesso! Dados enviados e Excel baixado!
+
+📧 Email cadastrado: ${formData.auth.email}
+
+Em breve você receberá acesso ao seu dashboard personalizado.`)
       } else {
         throw new Error('Erro ao enviar para n8n')
       }
@@ -1019,6 +1000,7 @@ export function FinalStep({ formData }) {
       alert('⚠️ Erro ao processar: ' + (error.message || 'Erro desconhecido'))
     }
   }
+
 
   return (
     <div className="mirai-card p-8 md:p-12 text-center space-y-6">
